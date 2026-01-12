@@ -85,47 +85,50 @@ jobs:
 
       - name: 5. 同步至微信公众号 (中转服务器执行)
         if: steps.filter.outputs.has_images == 'true'
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
-          WECHAT_APP_SECRET: ${{ secrets.WECHAT_APP_SECRET }}
-          IMAGES_LIST: ${{ steps.filter.outputs.IMAGES_LIST }}
+        # 【升级】使用更稳定的 v1.2.0 版本，解决现代服务器 SSH 握手失败问题
+        uses: appleboy/ssh-action@v1.2.0 
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_KEY }}
-          envs: WECHAT_APP_ID,WECHAT_APP_SECRET,IMAGES_LIST
-
+          # 【新增】envs 会自动将下方的 env 变量通过 SSH 注入到远程环境
+          envs: WECHAT_APP_ID,WECHAT_APP_SECRET,IMAGES_LIST,GITHUB_REPOSITORY
           script: |
-            # 1. 准备持久化目录
             WORK_DIR=~/blog-sync
             mkdir -p $WORK_DIR
             cd $WORK_DIR
             
-            # 2. 更新脚本 (始终抓取最新版)
-            echo ">>> [Deploy] Updating sync script..."
-            curl -s -o sync_to_wechat.py "https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/sync_to_wechat.py"
+            echo ">>> [Deploy] 正在更新同步脚本..."
+            # 动态获取脚本，注意使用了注入的 GITHUB_REPOSITORY 变量
+            curl -s -L -o sync_to_wechat.py "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/scripts/sync_to_wechat.py"
             
-            # 3. 安装依赖 (如果缺 requests)
-            if ! python3 -c "import requests" 2>/dev/null; then
-                echo ">>> Installing dependencies..."
-                python3 -m pip install requests --user
-            fi
-            
-            # 4. 下载并同步图片 (注意变量引用)
-            # 使用环境变量 IMAGES_LIST，该变量由 Action 注入
+            echo ">>> [Sync] 开始下载并同步图片..."
+            # 使用 envs 注入的 IMAGES_LIST 变量进行循环
             for img_path in $IMAGES_LIST; do
-                raw_url="https://raw.githubusercontent.com/${{ github.repository }}/main/$img_path"
-                local_filename=$(echo "$img_path" | sed 's/\//_/g') # 路径扁平化
+                raw_url="https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/$img_path"
+                # 路径扁平化逻辑
+                local_filename=$(echo "$img_path" | sed 's/\//_/g')
                 
-                echo ">>> Downloading: $img_path"
+                echo ">>> 正在下载: $img_path"
+                # 使用 -L 处理重定向
                 curl -s -L -o "$local_filename" "$raw_url"
             done
             
-            # 5. 执行同步
-            echo ">>> [Exec] Running sync logic..."
-            # 确保传入的是正确引用的变量，且移除多余分号
-            python3 sync_to_wechat.py "$IMAGES_LIST"
+            # 执行 Python 同步
+            if [ -f "sync_to_wechat.py" ]; then
+                # 确保安装了依赖
+                python3 -m pip install requests --user -q
+                echo ">>> [Exec] 正在执行微信同步逻辑..."
+                python3 sync_to_wechat.py "$IMAGES_LIST"
+            else
+                echo "❌ 错误: 未能获取到同步脚本"
+                exit 1
+            fi
             
-            # 6. 清理临时图片 (保留 history 和 script)
+            # 清理
             rm -f *.jpg *.jpeg *.png *.webp
+        env:
+          WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
+          WECHAT_APP_SECRET: ${{ secrets.WECHAT_APP_SECRET }}
+          IMAGES_LIST: ${{ steps.filter.outputs.IMAGES_LIST }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
