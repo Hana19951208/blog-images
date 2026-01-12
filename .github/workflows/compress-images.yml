@@ -6,8 +6,12 @@ on:
       - '**.jpeg'
       - '**.png'
       - '**.webp'
-  workflow_dispatch: # 支持手动触发
+  workflow_dispatch:
 
+# 【新增】并发控制：确保同一时间只有一个任务在修改仓库，防止 Git 提交冲突
+concurrency:
+  group: image-hosting
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -18,22 +22,21 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2 # 必须设置为 2 才能对比出本次 push 的差异文件
+          fetch-depth: 2
 
       - name: Filter Images
         id: filter
         run: |
-          # 仅获取新增(A)、复制(C)、修改(M)、重命名(R)的图片，排除删除(D)
-          IMAGES=$(git diff --name-only --diff-filter=ACMR HEAD^ HEAD | grep -E "\.(jpg|jpeg|png|webp)$" || true)
+          # 仅获取新增(A)和修改(M)的文件，排除删除
+          # 使用 xargs 将多行转为单行空格分隔，方便传参给压缩插件
+          IMAGES=$(git diff --name-only --diff-filter=AM HEAD^ HEAD | grep -E "\.(jpg|jpeg|png|webp)$" | xargs echo || true)
+          
           if [ -z "$IMAGES" ]; then
             echo "has_images=false" >> $GITHUB_OUTPUT
-            echo ">>> [信息] 本次提交不包含新增或修改的图片，跳过后续步骤。"
           else
             echo "has_images=true" >> $GITHUB_OUTPUT
-            echo "IMAGES_LIST<<EOF" >> $GITHUB_OUTPUT
-            echo "$IMAGES" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo ">>> [信息] 发现待处理图片，继续流程。"
+            echo "IMAGES_LIST=$IMAGES" >> $GITHUB_OUTPUT
+            echo ">>> [信息] 发现待处理图片: $IMAGES"
           fi
 
       - name: Compress Images
@@ -41,57 +44,45 @@ jobs:
         uses: calibreapp/image-actions@main
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          compressOnly: true # 开启纯压缩模式，避免其检查 PR 状态
+          # 【优化】只压缩本次变动的图片，不再扫描全库
+          imagePaths: ${{ steps.filter.outputs.IMAGES_LIST }}
+          compressOnly: true
+          jpegQuality: '80'
+          webpQuality: '80'
 
       - name: Auto Commit
         if: steps.filter.outputs.has_images == 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: 自动化压缩图片 [skip ci]"
-          branch: main
+          # 仅提交图片文件，防止误伤其他文件
+          file_pattern: '**.jpg **.jpeg **.png **.webp'
 
-
+      - name: Wait for Propagation
+        if: steps.filter.outputs.has_images == 'true'
+        # 【新增】等待 10 秒，确保 GitHub Raw 节点已同步最新文件
+        run: sleep 10
 
       - name: Warm up CDN (Preheat)
         if: steps.filter.outputs.has_images == 'true'
         env:
-          # 优先使用 GitHub Secrets 中的 CDN_DOMAIN
-          CDN_DOMAIN: ${{ secrets.CDN_DOMAIN}}
+          # 【优化】提供默认域名兜底，防止 Secret 为空
+          CDN_DOMAIN: ${{ secrets.CDN_DOMAIN || 'img.fangenwu.cn' }}
           FILES: ${{ steps.filter.outputs.IMAGES_LIST }}
         run: |
-          echo ">>> [日志] 开始 CDN 预热流程..."
-          echo ">>> [配置] 当前使用的 CDN 域名: $CDN_DOMAIN"
-          
-          if [ -z "$FILES" ]; then
-            echo ">>> [信息] 未发现需要预热的新图片（过滤后）。"
-            exit 0
-          fi
-
-          echo ">>> [信息] 发现待预热文件:"
-          echo "$FILES"
-
-          # 2. 循环请求自定义域名
+          echo ">>> [日志] 开始 CDN 预热..."
           SUCCESS_COUNT=0
-          FAIL_COUNT=0
           
           for FILE in $FILES; do
             URL="https://$CDN_DOMAIN/$FILE"
-            echo -n ">>> [调试] 正在预热: $URL ... "
-            
-            # 使用 curl 请求，输出状态码
-            STATUS_CODE=$(curl -s -o /dev/null -I -w "%{http_code}" "$URL")
+            # 使用 -L 处理可能的重定向，-I 触发缓存
+            STATUS_CODE=$(curl -s -L -o /dev/null -I -w "%{http_code}" "$URL")
             
             if [ "$STATUS_CODE" -eq 200 ] || [ "$STATUS_CODE" -eq 304 ]; then
-              echo "成功 [$STATUS_CODE]"
+              echo "✅ 成功 [$STATUS_CODE]: $URL"
               SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
             else
-              echo "失败 [$STATUS_CODE]"
-              FAIL_COUNT=$((FAIL_COUNT + 1))
+              echo "❌ 失败 [$STATUS_CODE]: $URL"
             fi
           done
-          
-          echo ">>> [日志] CDN 预热结果统计:"
-          echo "    - 总计数量: $((SUCCESS_COUNT + FAIL_COUNT))"
-          echo "    - 成功数: $SUCCESS_COUNT"
-          echo "    - 失败数: $FAIL_COUNT"
-          echo ">>> [日志] CDN 预热完成！"
+          echo ">>> [日志] 预热完成，共成功 ${SUCCESS_COUNT} 个文件。"
