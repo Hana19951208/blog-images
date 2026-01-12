@@ -27,7 +27,7 @@
 项目托管于 GitHub，通过 `.github/workflows/compress-images.yml` 驱动：
 
 1. **触发条件**：当有新图片（`.jpg`, `.png`, `.webp` 等）推送到仓库时，或通过 GitHub Actions 界面**手动触发**（处理最近一次提交）。
-2. **图片压缩**：使用高效 Action 对图片执行无损/近无损压缩。
+2. **图片压缩**：使用 `calibreapp/image-actions` 对图片执行无损/近无损压缩。
 3. **自动提交**：压缩后的图片会自动回写到仓库。
 4. **CDN 预热**：
    - 提取本次提交中变更的图片列表。
