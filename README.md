@@ -5,6 +5,7 @@
 ## ✨ 特性
 
 - **增量压缩**：改用高效的 Linux 原生工具（jpegoptim, optipng）对新增/修改图片进行针对性压缩。解决第三方 Action 全量扫描导致的资源浪费。
+- **公众号同步**：自动将新图片同步至微信公众号素材库（利用腾讯云中转方案绕过 IP 白名单）。
 - **针对性预热**：仅对本次新增或修改的图片进行预热，避免全量扫描，提高效率。
 - **并发控制**：内置并发冲突防护，确保多图连续上传时的 Git 提交安全。
 - **CDN 预热**：图片压缩提交后，自动请求 CDN 节点触发缓存。
@@ -45,6 +46,15 @@
 
 - `GITHUB_TOKEN`: 默认提供。
 - `CDN_DOMAIN` (Optional): CDN 访问域名。在 **Settings -> Secrets -> Actions** 中配置，默认回退为 `img.fangenwu.cn`。
+
+### 微信公众号同步 (可选)
+需配置以下 Secrets 以启用同步功能（使用中转服务器方案）：
+- `WECHAT_APP_ID`: 公众号 AppID
+- `WECHAT_APP_SECRET`: 公众号 AppSecret
+- `SERVER_HOST`: 中转服务器 IP (e.g. 150.158.xx.xx)
+- `SERVER_USER`: SSH 用户名
+- `SERVER_KEY`: SSH 私钥 (PEM格式)
+
 
 
 
