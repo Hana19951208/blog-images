@@ -1,0 +1,74 @@
+name: Compress and Preheat
+on:
+  push:
+    paths:
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.png'
+      - '**.webp'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # 必须设置为 2 才能对比出本次 push 的差异文件
+
+      - name: Compress Images
+        uses: calibreapp/image-actions@main
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Auto Commit
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: auto compress images [skip ci]"
+
+      - name: Warm up CDN (Preheat)
+        env:
+          # 优先使用 GitHub Secrets 中的 CDN_DOMAIN
+          CDN_DOMAIN: ${{ secrets.CDN_DOMAIN}}
+        run: |
+          echo ">>> [日志] 开始 CDN 预热流程..."
+          echo ">>> [配置] 当前使用的 CDN 域名: $CDN_DOMAIN"
+          
+          # 1. 获取本次提交中新增或修改的图片文件
+          FILES=$(git diff --name-only HEAD^ HEAD | grep -E "\.(jpg|jpeg|png|webp)$" || true)
+          
+          if [ -z "$FILES" ]; then
+            echo ">>> [信息] 本次推送未发现需要预热的新图片。"
+            exit 0
+          fi
+
+          echo ">>> [信息] 发现待预热文件:"
+          echo "$FILES"
+
+          # 2. 循环请求自定义域名
+          SUCCESS_COUNT=0
+          FAIL_COUNT=0
+          
+          for FILE in $FILES; do
+            URL="https://$CDN_DOMAIN/$FILE"
+            echo -n ">>> [调试] 正在预热: $URL ... "
+            
+            # 使用 curl 请求，输出状态码
+            STATUS_CODE=$(curl -s -o /dev/null -I -w "%{http_code}" "$URL")
+            
+            if [ "$STATUS_CODE" -eq 200 ] || [ "$STATUS_CODE" -eq 304 ]; then
+              echo "成功 [$STATUS_CODE]"
+              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+            else
+              echo "失败 [$STATUS_CODE]"
+              FAIL_COUNT=$((FAIL_COUNT + 1))
+            fi
+          done
+          
+          echo ">>> [日志] CDN 预热结果统计:"
+          echo "    - 总计数量: $((SUCCESS_COUNT + FAIL_COUNT))"
+          echo "    - 成功数: $SUCCESS_COUNT"
+          echo "    - 失败数: $FAIL_COUNT"
+          echo ">>> [日志] CDN 预热完成！"
