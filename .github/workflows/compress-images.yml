@@ -98,35 +98,17 @@ jobs:
             mkdir -p $WORK_DIR
             cd $WORK_DIR
             
+            # 1. 抓取最新脚本
             echo ">>> [Deploy] 正在更新同步脚本..."
-            # 动态获取脚本，注意使用了注入的 GITHUB_REPOSITORY 变量
             curl -s -L -o sync_to_wechat.py "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/scripts/sync_to_wechat.py"
             
-            echo ">>> [Sync] 开始下载并同步图片..."
-            # 使用 envs 注入的 IMAGES_LIST 变量进行循环
-            for img_path in $IMAGES_LIST; do
-                raw_url="https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/$img_path"
-                # 路径扁平化逻辑
-                local_filename=$(echo "$img_path" | sed 's/\//_/g')
-                
-                echo ">>> 正在下载: $img_path"
-                # 使用 -L 处理重定向
-                curl -s -L -o "$local_filename" "$raw_url"
-            done
+            # 2. 准备环境
+            python3 -m pip install requests --user -q
             
-            # 执行 Python 同步
-            if [ -f "sync_to_wechat.py" ]; then
-                # 确保安装了依赖
-                python3 -m pip install requests --user -q
-                echo ">>> [Exec] 正在执行微信同步逻辑..."
-                python3 sync_to_wechat.py "$IMAGES_LIST"
-            else
-                echo "❌ 错误: 未能获取到同步脚本"
-                exit 1
-            fi
-            
-            # 清理
-            rm -f *.jpg *.jpeg *.png *.webp
+            # 3. 执行同步 (下载和重试逻辑已集成在 Python 中)
+            echo ">>> [Exec] 启动同步任务..."
+            python3 sync_to_wechat.py "$IMAGES_LIST"
+
         env:
           WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
           WECHAT_APP_SECRET: ${{ secrets.WECHAT_APP_SECRET }}
