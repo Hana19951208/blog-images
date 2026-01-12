@@ -53,7 +53,13 @@
 - `WECHAT_APP_SECRET`: 公众号 AppSecret
 - `SERVER_HOST`: 中转服务器 IP (e.g. 150.158.xx.xx)
 - `SERVER_USER`: SSH 用户名
-- `SERVER_KEY`: SSH 私钥 (PEM格式)
+- `SERVER_PASSWORD`: SSH 登录密码
+
+#### 同步逻辑细节：
+- **注册表模式 (Registry Pattern)**：在服务器端维护 `sync_history.json`，通过 MD5 校验文件是否变动，避免重复上传素材，节省微信素材库额度。
+- **路径扁平化**：原始路径 `blog/2026/img.jpg` 会自动转义为 `blog_2026_img.jpg` 作为微信素材标题，方便后台管理和搜索。
+- **持久化脚本**：同步脚本持久化存放于服务器 `~/blog-sync/` 目录下，每次执行前会自动检查并从 GitHub 获取最新版本。
+
 
 
 
