@@ -5,10 +5,25 @@ import sys
 import time
 import hashlib
 
+def load_env():
+    """本地调试：从 .env 文件加载环境变量"""
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+    if os.path.exists(env_path):
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    key, value = line.split('=', 1)
+                    os.environ[key] = value
+
+# 在生产环境，变量由 Action 注入；本地调试从 .env 加载
+load_env()
+
 # 配置
 APP_ID = os.environ.get('WECHAT_APP_ID')
 APP_SECRET = os.environ.get('WECHAT_APP_SECRET')
 GITHUB_REPO = os.environ.get('GITHUB_REPOSITORY')
+
 WORKSPACE_DIR = os.path.expanduser("~/blog-sync")
 HISTORY_FILE = os.path.join(WORKSPACE_DIR, "sync_history.json")
 

@@ -79,7 +79,21 @@
    ssh -i ./id_rsa_github root@150.158.24.67
    ```
 
+#### ⚙️ 本地调试指南
+如果您需要调试同步逻辑，可以使用以下方式：
+
+1. **环境准备**：
+   - 复制 `.env.example` 并重命名为 `.env`。
+   - 在 `.env` 中填入您的 `WECHAT_APP_ID` 和 `WECHAT_APP_SECRET`。
+2. **运行调试**：
+   ```bash
+   # 参数为图片在仓库中的相对路径
+   python3 scripts/sync_to_wechat.py "blog/2026-01/example.jpg"
+   ```
+   *脚本会自动识别 `.env` 文件并加载配置，无需手动 export。*
+
 #### ⚙️ 同步逻辑细节：
+
 - **注册表模式 (Registry Pattern)**：在服务器端维护 `sync_history.json`，通过 MD5 校验文件是否变动，避免重复上传素材，节省微信素材库额度。
 - **路径扁平化**：原始路径 `blog/2026/img.jpg` 会自动转义为 `blog_2026_img.jpg` 作为微信素材标题，方便后台管理和搜索。
 - **持久化脚本**：同步脚本持久化存放于服务器 `~/blog-sync/` 目录下，每次执行前会自动检查并从 GitHub 获取最新版本。
