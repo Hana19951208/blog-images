@@ -103,16 +103,71 @@ To prevent login alerts on your server due to GitHub Actions' global nodes, we r
 
 ---
 
-## 🛠️ Local Debugging
+## 🌐 Advanced: Cloudflare Worker Acceleration (Recommended)
 
-```bash
-# Copy and configure env
-cp .env.example .env
-# Run sync test
-python3 scripts/sync_to_wechat.py "blog/test.jpg"
+GitHub Raw access can be unstable in some regions. Using Cloudflare Worker, you can transform it into a powerful gateway with **global CDN caching, no-ICP-filing requirement, and custom domain support**.
+
+### 1. Create a Worker
+1. Log in to your [Cloudflare Dashboard](https://dash.cloudflare.com/) and go to **Workers & Pages**.
+2. Click **Create application** -> **Create Worker**.
+3. Name it `blog-images-proxy` and paste the provided code into the editor.
+
+### 2. Implementation Code
+Update the following variables with your repo info:
+```js
+const GITHUB_USER = 'hana19951208';
+const GITHUB_REPO = 'BlogImagesBox';
+const GITHUB_BRANCH = 'main';
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+    const githubUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}${path}`;
+    
+    let response = await fetch(githubUrl, {
+      headers: { 'User-Agent': 'Cloudflare-Worker' }
+    });
+
+    if (response.status === 200) {
+      let newHeaders = new Headers(response.headers);
+      newHeaders.delete("Vary");
+      newHeaders.delete("X-Frame-Options");
+      newHeaders.delete("Content-Security-Policy");
+      // Cache for 1 year for maximum speed
+      newHeaders.set("Cache-Control", "public, max-age=31536000, s-maxage=31536000, immutable");
+      newHeaders.set("access-control-allow-origin", "*");
+      return new Response(response.body, { status: 200, headers: newHeaders });
+    }
+    return response;
+  }
+}
 ```
 
+### 3. Bind Custom Domain
+1. In the Worker dashboard, click **Settings** -> **Triggers** -> **Custom Domains**.
+2. Add your domain (e.g., `img.fangenwu.cn`).
+3. **Note**: If your domain is still under ICP verification, ensure your nameservers are pointed to Cloudflare.
+
 ---
+
+## 🎨 Using with Typora + PicGo
+
+1. Select **GitHub** in PicGo settings.
+2. **Set Custom Domain**: Enter your Cloudflare Worker URL (e.g., `https://img.fangenwu.cn`).
+3. Now, when you paste images in Typora, PicGo will upload them to GitHub and return the Cloudflare-accelerated URL.
+
+---
+
+## 📁 GitHub Pages Custom Domain
+
+To host your landing page on your own domain:
+1. Go to **Settings -> Pages** in your GitHub repo and find **Custom domain**.
+2. Enter your domain (e.g., `docs.fangenwu.cn`).
+3. In your DNS provider (Cloudflare), add a **CNAME** record pointing to `Hana19951208.github.io`.
+
+---
+
 
 **Proudly powered by GitHub Actions & Cloudflare.**
 If you like it, please give a ⭐️!

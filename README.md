@@ -125,16 +125,71 @@ graph LR
 
 ---
 
-## 🛠️ 本地调试
+## 🌐 高级进阶：Cloudflare Worker 极致加速 (推荐)
 
-```bash
-# 复制并配置环境
-cp .env.example .env
-# 运行同步测试
-python3 scripts/sync_to_wechat.py "blog/test.jpg"
+GitHub Raw 的访问在某些地区不够稳定。通过 Cloudflare Worker，您可以将其转换为一个**支持全球 CDN 缓存、免备案、且支持自定义域名**的超强图床网关。
+
+### 1. 创建 Worker
+1. 登录 [Cloudflare 控制台](https://dash.cloudflare.com/)，进入 **Workers & Pages**。
+2. 点击 **Create application** -> **Create Worker**。
+3. 命名为 `blog-images-proxy` 并在编辑器中粘贴本项目提供的加速代码。
+
+### 2. 配置加速代码
+将以下代码中的变量修改为您自己的信息：
+```js
+const GITHUB_USER = 'hana19951208';
+const GITHUB_REPO = 'BlogImagesBox';
+const GITHUB_BRANCH = 'main';
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+    const githubUrl = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}${path}`;
+    
+    let response = await fetch(githubUrl, {
+      headers: { 'User-Agent': 'Cloudflare-Worker' }
+    });
+
+    if (response.status === 200) {
+      let newHeaders = new Headers(response.headers);
+      newHeaders.delete("Vary");
+      newHeaders.delete("X-Frame-Options");
+      newHeaders.delete("Content-Security-Policy");
+      // 强制缓存 1 年，加速访问
+      newHeaders.set("Cache-Control", "public, max-age=31536000, s-maxage=31536000, immutable");
+      newHeaders.set("access-control-allow-origin", "*");
+      return new Response(response.body, { status: 200, headers: newHeaders });
+    }
+    return response;
+  }
+}
 ```
 
+### 3. 绑定自定义域名
+1. 在 Worker 详情页点击 **Settings** -> **Triggers** -> **Custom Domains**。
+2. 添加您的域名（如 `img.fangenwu.cn`）。
+3. **注意**：由于腾讯云域名实名审核中，Cloudflare 可能会提示 DNS 挂载问题，请确保您的域名服务器已指向 Cloudflare。
+
 ---
+
+## 🎨 搭配 Typora + PicGo 使用
+
+1. 在 PicGo 中选择 **GitHub** 图床。
+2. **设定自定义域名**：填写您的 Cloudflare Worker 域名（例如 `https://img.fangenwu.cn`）。
+3. 这样您在 Typora 中粘贴图片时，PicGo 会将其上传到 GitHub，同时返回通过 Cloudflare 加速后的地址。
+
+---
+
+## 📁 GitHub Pages 自定义域名设置
+
+如果您希望 `docs/` 下的首页也能通过您的域名访问：
+1. 在仓库 **Settings -> Pages** 下找到 **Custom domain**。
+2. 输入您的自定义域名（如 `docs.fangenwu.cn`）。
+3. 在您的 DNS 服务商（腾讯云/Cloudflare）处，为该域名添加一条 **CNAME** 记录，指向 `Hana19951208.github.io`。
+
+---
+
 
 ## 📝 Roadmap
 
