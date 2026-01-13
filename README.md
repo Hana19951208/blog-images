@@ -1,17 +1,35 @@
 # 🖼️ Blog Images Box (V2.0)
 
-[![GitHub Stars](https://img.shields.io/github/stars/Hana19951208/blog-images?style=flat-square)](https://github.com/Hana19951208/blog-images/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/Hana19951208/blog-images?style=flat-square)](https://github.com/Hana19951208/blog-images/network/members)
-[![License](https://img.shields.io/github/license/Hana19951208/blog-images?style=flat-square)](https://github.com/Hana19951208/blog-images/blob/main/LICENSE)
+<p align="center">
+  <img src="https://img.shields.io/github/stars/Hana19951208/blog-images?style=for-the-badge&logo=github&color=5e5ce6" alt="Stars">
+  <img src="https://img.shields.io/github/forks/Hana19951208/blog-images?style=for-the-badge&logo=github&color=5e5ce6" alt="Forks">
+  <img src="https://img.shields.io/github/license/Hana19951208/blog-images?style=for-the-badge&logo=github&color=5e5ce6" alt="License">
+  <br>
+  <img src="https://img.shields.io/github/last-commit/Hana19951208/blog-images?style=flat-square" alt="Last Commit">
+  <img src="https://img.shields.io/github/v/tag/Hana19951208/blog-images?style=flat-square&label=release" alt="Release">
+</p>
 
-> **极致优雅的开源图床解决方案**。集成 Typora + PicGo + GitHub Actions + 微信公众号同步。
-> 自动压缩、高效预热、幂等同步，让图片分发从此简单。
+> **极致优雅的开源图床解决方案**。集成 **Typora + PicGo + GitHub Actions + 微信公众号同步**。
+> 别再手动压缩和搬运图片了，让流水线为你打理一切。
 
 [English](./README_EN.md) | 中文说明
 
 ---
 
+## 💡 核心流程图 (Workflow)
+
+```mermaid
+graph LR
+    A[Typora 粘贴] --> B[PicGo 上传 GitHub]
+    B --> C{GitHub Action}
+    C --> D[Job 1: 瞬时 CDN 预热]
+    C --> E[Job 2: 差异化压缩]
+    E --> F[Git Commit 回传]
+    E --> G[同步微信素材库]
+```
+
 ## 💡 为什么需要它？ (解决的痛点)
+
 
 作为博主或开发者，你是否厌倦了以下流程？
 - ❌ **图片太大**：手动压缩太累，不压缩 CDN 流量费太贵。
@@ -59,12 +77,16 @@
 
 | Secret 名称 | 含义 | 说明 |
 | :--- | :--- | :--- |
-| `CDN_DOMAIN` | CDN 域名 | 如 `img.fangenwu.cn` |
+| `CDN_DOMAIN` | CDN 域名 | 如 `img.example.com` |
 | `WECHAT_APP_ID` | 微信 AppID | 公众号后台查看 |
 | `WECHAT_APP_SECRET`| 微信 AppSecret| 公众号后台查看 |
 | `SERVER_HOST` | 中转服务器 IP | 您的托管服务器公网 IP |
 | `SERVER_USER` | SSH 用户 | **强烈建议使用 `github-bot`** |
 | `SERVER_KEY` | SSH 私钥 | 私有密钥内容 |
+
+> ⚠️ **重要提示 (微信白名单)**：
+> 您必须前往 **[微信公众平台] -> 设置与开发 -> 基本配置 -> IP白名单**，将您的**中转服务器公网 IP**（即 `SERVER_HOST`）加入白名单。否则同步脚本将无法获取 Access Token。
+
 
 ---
 
