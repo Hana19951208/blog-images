@@ -1,12 +1,12 @@
 # 🖼️ Blog Images Box (V2.0)
 
 <p align="center">
-  <img src="https://img.shields.io/github/stars/Hana19951208/blog-images?style=for-the-badge&logo=github&color=5e5ce6" alt="Stars">
-  <img src="https://img.shields.io/github/forks/Hana19951208/blog-images?style=for-the-badge&logo=github&color=5e5ce6" alt="Forks">
-  <img src="https://img.shields.io/github/license/Hana19951208/blog-images?style=for-the-badge&logo=github&color=5e5ce6" alt="License">
+  <img src="https://img.shields.io/github/stars/Hana19951208/BlogImagesBox?style=for-the-badge&logo=github&color=5e5ce6" alt="Stars">
+  <img src="https://img.shields.io/github/forks/Hana19951208/BlogImagesBox?style=for-the-badge&logo=github&color=5e5ce6" alt="Forks">
+  <img src="https://img.shields.io/github/license/Hana19951208/BlogImagesBox?style=for-the-badge&logo=github&color=5e5ce6" alt="License">
   <br>
-  <img src="https://img.shields.io/github/last-commit/Hana19951208/blog-images?style=flat-square" alt="Last Commit">
-  <img src="https://img.shields.io/github/v/tag/Hana19951208/blog-images?style=flat-square&label=release" alt="Release">
+  <img src="https://img.shields.io/github/last-commit/Hana19951208/BlogImagesBox?style=flat-square" alt="Last Commit">
+  <img src="https://img.shields.io/github/v/tag/Hana19951208/BlogImagesBox?style=flat-square&label=release" alt="Release">
 </p>
 
 > **极致优雅的开源图床解决方案**。集成 **Typora + PicGo + GitHub Actions + 微信公众号同步**。
