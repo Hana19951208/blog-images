@@ -1,4 +1,5 @@
-name: Compress and Preheat
+name: Parallel Image Pipeline
+
 on:
   push:
     paths:
@@ -14,103 +15,94 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  # 1. 甄别发现 Job：负责筛选变动图片
+  filter:
+    runs-on: ubuntu-latest
+    outputs:
+      has_images: ${{ steps.check.outputs.has_images }}
+      IMAGES_LIST: ${{ steps.check.outputs.IMAGES_LIST }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: check
+        run: |
+          IMAGES=$(git diff --name-only --diff-filter=AM HEAD^ HEAD | grep -E "\.(jpg|jpeg|png|webp)$" | xargs echo || true)
+          if [ -z "$IMAGES" ]; then
+            echo "has_images=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_images=true" >> $GITHUB_OUTPUT
+            echo "IMAGES_LIST=$IMAGES" >> $GITHUB_OUTPUT
+            echo ">>> [Found] $IMAGES"
+          fi
+
+  # 2. 快路径 (Fast Path)：CDN 预热，独立运行，最快开始
+  preheat:
+    needs: filter
+    if: needs.filter.outputs.has_images == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: CDN Preheat
+        env:
+          CDN_DOMAIN: ${{ secrets.CDN_DOMAIN || 'img.fangenwu.cn' }}
+          FILES: ${{ needs.filter.outputs.IMAGES_LIST }}
+        run: |
+          echo ">>> [Fast Path] 启动针对源文件的 CDN 预热..."
+          # 这里不需要等待，因为图片推送到 GitHub 后 Raw 立即生效
+          for FILE in $FILES; do
+            URL="https://$CDN_DOMAIN/$FILE"
+            STATUS=$(curl -s -L -o /dev/null -I -w "%{http_code}" "$URL")
+            echo ">>> [Warmup] $STATUS - $URL"
+          done
+
+  # 3. 后台路径 (Background Path)：压缩、提交、微信同步
+  background-sync:
+    needs: filter
+    if: needs.filter.outputs.has_images == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - name: 1. 筛选本次新增图片
-        id: filter
+      - name: Step 3.1 - 增量压缩
         run: |
-          # 获取新增 (A) 和修改 (M) 的图片路径
-          IMAGES=$(git diff --name-only --diff-filter=AM HEAD^ HEAD | grep -E "\.(jpg|jpeg|png|webp)$" | xargs echo || true)
-          
-          if [ -z "$IMAGES" ]; then
-            echo "has_images=false" >> $GITHUB_OUTPUT
-            echo ">>> [信息] 未发现新增图片。"
-          else
-            echo "has_images=true" >> $GITHUB_OUTPUT
-            echo "IMAGES_LIST=$IMAGES" >> $GITHUB_OUTPUT
-            echo ">>> [信息] 待处理图片: $IMAGES"
-          fi
-
-      - name: 2. 安装并执行增量压缩
-        if: steps.filter.outputs.has_images == 'true'
-        run: |
-          # 安装轻量级压缩工具
           sudo apt-get update && sudo apt-get install -y jpegoptim optipng webp
-          
-          # 仅针对筛选出的文件进行循环压缩
-          for FILE in ${{ steps.filter.outputs.IMAGES_LIST }}; do
-            echo ">>> [处理中] $FILE"
+          for FILE in ${{ needs.filter.outputs.IMAGES_LIST }}; do
+            echo ">>> [Compressing] $FILE"
             if [[ $FILE == *.jpg ]] || [[ $FILE == *.jpeg ]]; then
-              jpegoptim --size=400k "$FILE" # 限制大小在 400k 以内
+              jpegoptim --size=400k "$FILE"
             elif [[ $FILE == *.png ]]; then
               optipng -o2 "$FILE"
-            elif [[ $FILE == *.webp ]]; then
-              echo ">>> [跳过] WebP 文件通常已优化，跳过二次压缩。"
             fi
           done
 
-
-      - name: 3. 自动提交 (修复匹配报错)
-        if: steps.filter.outputs.has_images == 'true'
+      - name: Step 3.2 - 自动回传仓库
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          # 【修复】不指定具体后缀，由插件自动检测变更的文件，避免 pathspec 报错
-          commit_message: "chore: 自动化压缩图片 [skip ci]"
+          commit_message: "chore: 自动化优化图片资产 [skip ci]"
           branch: main
-          # 去掉 file_pattern，让它自动 add 变动的文件
 
-      - name: 4. 等待同步并预热 CDN
-        if: steps.filter.outputs.has_images == 'true'
+      - name: Step 3.3 - 同步至微信公众号 (中转服务器执行)
+        uses: appleboy/ssh-action@v1.2.0
         env:
-          # 提供域名默认值兜底
-          CDN_DOMAIN: ${{ secrets.CDN_DOMAIN || 'img.fangenwu.cn' }}
-          FILES: ${{ steps.filter.outputs.IMAGES_LIST }}
-        run: |
-          sleep 10 # 等待 GitHub Raw 更新
-          echo ">>> [日志] 开始针对新图片进行预热..."
-          for FILE in $FILES; do
-            URL="https://$CDN_DOMAIN/$FILE"
-            # -L 跟随重定向，-I 获取头信息触发缓存
-            STATUS=$(curl -s -L -o /dev/null -I -w "%{http_code}" "$URL")
-            echo ">>> [预热结果] $STATUS - $URL"
-          done
-
-      - name: 5. 同步至微信公众号 (中转服务器执行)
-        if: steps.filter.outputs.has_images == 'true'
-        # 【升级】使用更稳定的 v1.2.0 版本，解决现代服务器 SSH 握手失败问题
-        uses: appleboy/ssh-action@v1.2.0 
+          WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
+          WECHAT_APP_SECRET: ${{ secrets.WECHAT_APP_SECRET }}
+          IMAGES_LIST: ${{ needs.filter.outputs.IMAGES_LIST }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_KEY }}
-          # 【新增】envs 会自动将下方的 env 变量通过 SSH 注入到远程环境
           envs: WECHAT_APP_ID,WECHAT_APP_SECRET,IMAGES_LIST,GITHUB_REPOSITORY
           script: |
-            WORK_DIR=~/blog-sync
-            mkdir -p $WORK_DIR
-            cd $WORK_DIR
+            cd ~/blog-sync
             
-            # 1. 抓取最新脚本
-            echo ">>> [Deploy] 正在更新同步脚本..."
+            # 更新脚本
             curl -s -L -o sync_to_wechat.py "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/scripts/sync_to_wechat.py"
             
-            # 2. 准备环境
-            python3 -m pip install requests --user -q
-            
-            # 3. 执行同步 (下载和重试逻辑已集成在 Python 中)
-            echo ">>> [Exec] 启动同步任务..."
+            # 安装依赖并执行
+            echo ">>> [WeChat] 启动后台同步逻辑..."
             python3 sync_to_wechat.py "$IMAGES_LIST"
-
-        env:
-          WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
-          WECHAT_APP_SECRET: ${{ secrets.WECHAT_APP_SECRET }}
-          IMAGES_LIST: ${{ steps.filter.outputs.IMAGES_LIST }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
