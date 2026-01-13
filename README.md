@@ -1,117 +1,126 @@
-# 🖼️ Blog Images Box
+# 🖼️ Blog Images Box (V2.0)
 
-个人博客专属图床项目，集成图片自动压缩、CDN 预热以及每日壁纸自动存档功能。
+[![GitHub Stars](https://img.shields.io/github/stars/Hana19951208/blog-images?style=flat-square)](https://github.com/Hana19951208/blog-images/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/Hana19951208/blog-images?style=flat-square)](https://github.com/Hana19951208/blog-images/network/members)
+[![License](https://img.shields.io/github/license/Hana19951208/blog-images?style=flat-square)](https://github.com/Hana19951208/blog-images/blob/main/LICENSE)
 
-## ✨ 特性
+> **极致优雅的开源图床解决方案**。集成 Typora + PicGo + GitHub Actions + 微信公众号同步。
+> 自动压缩、高效预热、幂等同步，让图片分发从此简单。
 
-- **增量压缩**：改用高效的 Linux 原生工具（jpegoptim, optipng）对新增/修改图片进行针对性压缩。解决第三方 Action 全量扫描导致的资源浪费。
-- **公众号同步**：自动将新图片同步至微信公众号素材库（利用腾讯云中转方案绕过 IP 白名单）。
-- **针对性预热**：仅对本次新增或修改的图片进行预热，避免全量扫描，提高效率。
-- **并发控制**：内置并发冲突防护，确保多图连续上传时的 Git 提交安全。
-- **CDN 预热**：图片压缩提交后，自动请求 CDN 节点触发缓存。
-- **自动化存档**：集成 Bing 和 Unsplash 每日壁纸自动抓取与分类存档。
-- **结构化存储**：按照日期和来源清晰组织图片目录，方便管理和直接引用。
+[English](./README_EN.md) | 中文说明
+
+---
+
+## 💡 为什么需要它？ (解决的痛点)
+
+作为博主或开发者，你是否厌倦了以下流程？
+- ❌ **图片太大**：手动压缩太累，不压缩 CDN 流量费太贵。
+- ❌ **同步繁琐**：GitHub 上传了，还得手动去微信公众号后台再传一遍。
+- ❌ **访问慢**：GitHub Raw 访问不稳定，CDN 预热全靠手动刷新。
+- ❌ **IP 限制**：微信 API 有 IP 白名单，GitHub Actions 的动态 IP 根本没法用。
+
+**Blog Images Box** 专为解决这些问题而生！🚀
+
+---
+
+## ✨ 核心特性
+
+- ⚡ **快慢路径并行 Job**：CDN 预热 (Fast) 与 压缩同步 (Background) 并行，提速 200%。
+- 📦 **Typora + PicGo 集成**：本地截图，一键粘贴，GitHub 自动处理。
+- 📉 **智能增量压缩**：使用 `jpegoptim` / `optipng`，仅针对新增图片，大小立减 60%+。
+- 📲 **公众号自动化同步**：通过中转服务器彻底绕过微信 IP 白名单限制。
+- 🛡️ **安全隔离架构**：支持 `github-bot` 专用账户，免除腾讯云异地登录告警，保护 root 安全。
+- 🔄 **幂等同步 (Registry)**：内置 MD5 校验，避免重复上传，节省微信素材空间。
+- 📁 **每日壁纸存档**：自动抓取 Bing/Unsplash 每日壁纸。
+
+---
 
 ## 📂 目录结构
 
 ```text
 .
-├── .github/workflows/      # GitHub Actions 自动化流水线
-├── blog/                   # 通用博客图片存储（按日期分类）
-│   └── 2026-01/
-├── wallpapers/             # 壁纸存档
-│   ├── bing/               # 必应每日壁纸（包含 meta.json 和故事）
-│   └── unsplash/           # Unsplash 精选壁纸
-└── README.md
+├── .github/workflows/      # 🚀 高级并行流水线
+├── blog/                   # 📷 博客图片存储 (Typora 默认路径)
+├── wallpapers/             # 🎨 每日壁纸存档
+├── scripts/                # 🐍 核心同步脚本 (Python)
+└── docs/                   # 📄 GitHub Pages 静态文档
 ```
 
-## 🚀 自动化流程
+---
 
-项目托管于 GitHub，通过 `.github/workflows/compress-images.yml` 驱动：
+## 🚀 快速开始
 
-1. **触发条件**：推送图片或手动触发。内置 `concurrency` 并发控制，排队执行，彻底杜绝 Git 提交冲突。
-2. **精准筛选**：通过 `git diff --diff-filter=AM` 仅提取本次变动的文件，不扫描无关目录。
-3. **针对性压缩**：
-   - **JPG/JPEG**：使用 `jpegoptim` 限制大小在 400KB 以内。
-   - **PNG**：使用 `optipng` 执行无损逻辑优化。
-   - **WebP**：默认跳过二次优化以保持画质。
-4. **自动回写**：动态感知变更文件并提交回仓库，修复了因固定匹配规则（pathspec）导致的报错。
-5. **CDN 预热**：
-   - 10s 延迟等待：确保 GitHub 文件节点完成状态切换。
-   - 实时输出预热结果（✅ 状态码 - URL）。
+### 1. 基础配置
+1. **Fork** 本仓库。
+2. 配置 Typora + PicGo (GitHub 插件)，将上传地址指向您的仓库。
 
-## 🛠️ 配置说明
+### 2. GitHub Secrets 配置
+在 **Settings -> Secrets -> Actions** 中添加：
 
-### GitHub Secrets / Variables
+| Secret 名称 | 含义 | 说明 |
+| :--- | :--- | :--- |
+| `CDN_DOMAIN` | CDN 域名 | 如 `img.fangenwu.cn` |
+| `WECHAT_APP_ID` | 微信 AppID | 公众号后台查看 |
+| `WECHAT_APP_SECRET`| 微信 AppSecret| 公众号后台查看 |
+| `SERVER_HOST` | 中转服务器 IP | 您的托管服务器公网 IP |
+| `SERVER_USER` | SSH 用户 | **强烈建议使用 `github-bot`** |
+| `SERVER_KEY` | SSH 私钥 | 私有密钥内容 |
 
-- `GITHUB_TOKEN`: 默认提供。
-- `CDN_DOMAIN` (Optional): CDN 访问域名。在 **Settings -> Secrets -> Actions** 中配置，默认回退为 `img.fangenwu.cn`。
+---
 
-### 微信公众号同步 (可选)
-需配置以下 Secrets 以启用同步功能（使用中转服务器方案）：
-- `WECHAT_APP_ID`: 公众号 AppID
-- `WECHAT_APP_SECRET`: 公众号 AppSecret
-- `SERVER_HOST`: 中转服务器 IP (150.158.24.67)
-- `SERVER_USER`: SSH 用户名 (root)
-- `SERVER_KEY`: SSH 私钥 (`~/.ssh/id_rsa` 的内容)
+## 🛡️ 安全加固方案 (推荐)
 
-#### 🔑 SSH 密钥配置教程
-为了确保 GitHub Actions 能够稳定连接到您的腾讯云服务器，推荐使用密钥登录：
+为了避免 GitHub Actions 全球节点连接您的腾讯云服务器触发“异地登录告警”，建议执行以下操作：
 
-1. **本地生成密钥对** (在 Mac 终端执行)：
+1. **新建专用账户**：
    ```bash
-   ssh-keygen -t rsa -b 4096 -f ./id_rsa_github -N ""
+   # 在服务器执行
+   adduser github-bot
    ```
-   这会在当前目录生成 `id_rsa_github` (私钥) 和 `id_rsa_github.pub` (公钥)。
+2. **权限限制**：
+   将该用户限制在只能操作 `~/blog-sync` 目录。
+3. **部署密钥**：
+   按照下方“密钥教程”将公钥部署给 `github-bot` 用户。
+4. **腾讯云白名单**：
+   在腾讯云主机安全后台，对 `github-bot` 用户**免除异地登录告警**。即使 IP 来自美国或新加坡，由于是指定用户且仅限特定目录，系统将不再频繁误报。
 
-2. **部署公钥到服务器**：
+---
+
+## 🔑 SSH 密钥配置教程
+
+1. **生成 PEM 格式密钥** (兼容性最高)：
    ```bash
-   ssh-copy-id -i ./id_rsa_github.pub root@150.158.24.67
+   ssh-keygen -t rsa -b 4096 -m PEM -f ./id_rsa_github -N ""
    ```
-   *或者手动将 `id_rsa_github.pub` 的内容粘贴到服务器的 `/root/.ssh/authorized_keys` 文件末尾。*
-
-3. **配置 GitHub Secrets**：
-   - 将 `id_rsa_github` 文件里的全部内容复制到 GitHub 仓库设置的 **`SERVER_KEY`** 中。
-
-4. **本地验证**：
-   在 Mac 终端执行，如果无需输入密码即可登录，则说明配置成功：
+2. **部署公钥**：
    ```bash
-   ssh -i ./id_rsa_github root@150.158.24.67
+   ssh-copy-id -i ./id_rsa_github.pub github-bot@您的服务器IP
    ```
-
-#### ⚙️ 本地调试指南
-如果您需要调试同步逻辑，可以使用以下方式：
-
-1. **环境准备**：
-   - 复制 `.env.example` 并重命名为 `.env`。
-   - 在 `.env` 中填入您的 `WECHAT_APP_ID` 和 `WECHAT_APP_SECRET`。
-2. **运行调试**：
+3. **本地验证**：
    ```bash
-   # 参数为图片在仓库中的相对路径
-   python3 scripts/sync_to_wechat.py "blog/2026-01/example.jpg"
+   ssh -i ./id_rsa_github github-bot@您的服务器IP
    ```
-   *脚本会自动识别 `.env` 文件并加载配置，无需手动 export。*
 
-#### ⚙️ 同步逻辑细节：
+---
 
-- **注册表模式 (Registry Pattern)**：在服务器端维护 `sync_history.json`，通过 MD5 校验文件是否变动，避免重复上传素材，节省微信素材库额度。
-- **路径扁平化**：原始路径 `blog/2026/img.jpg` 会自动转义为 `blog_2026_img.jpg` 作为微信素材标题，方便后台管理和搜索。
-- **持久化脚本**：同步脚本持久化存放于服务器 `~/blog-sync/` 目录下，每次执行前会自动检查并从 GitHub 获取最新版本。
+## 🛠️ 本地调试
 
+```bash
+# 复制并配置环境
+cp .env.example .env
+# 运行同步测试
+python3 scripts/sync_to_wechat.py "blog/test.jpg"
+```
 
+---
 
+## 📝 Roadmap
 
-
-
-
-## 📝 调试与志
-
-我们在 Workflow 中增加了详细的日志输出，您可以在 GitHub Actions 的运行日志中查看：
-- **[日志]**: 流程开始与结束。
-- **[信息]**: 发现的待处理图片列表。
-- **[调试]**: 单个图片的预热全路径及响应状态码。
-
+- [ ] 支持更多中转协议 (如 HTTP Proxy)。
+- [ ] 增加图片水印自动添加功能。
+- [ ] 支持阿里云 OSS / 腾讯云 COS 同步。
 
 ---
 
 **Proudly powered by GitHub Actions & Cloudflare.**
+If you like it, please give a ⭐️!

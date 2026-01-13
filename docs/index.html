@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Images Box - 极致优雅的开源图床</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #5e5ce6;
+            --bg: #000000;
+            --text: #ffffff;
+            --glass: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .gradient-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% -20%, #2c2b5e 0%, #000 70%);
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .hero {
+            padding: 100px 0;
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 4rem;
+            font-weight: 600;
+            letter-spacing: -1px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #fff 0%, #aaa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.tagline {
+            font-size: 1.5rem;
+            color: #888;
+            margin-bottom: 40px;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 80px;
+        }
+
+        .btn {
+            padding: 15px 35px;
+            border-radius: 40px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: #ffffff;
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary {
+            border: 1px solid var(--border);
+            color: #fff;
+            background: var(--glass);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .feature-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: left;
+            transition: 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .feature-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+
+        .feature-card p {
+            color: #aaa;
+        }
+
+        footer {
+            margin-top: 100px;
+            padding: 40px;
+            border-top: 1px solid var(--border);
+            color: #444;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 2.5rem; }
+            .cta-buttons { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="gradient-bg"></div>
+    <div class="container">
+        <header class="hero">
+            <div class="logo">🖼️</div>
+            <h1>Blog Images Box</h1>
+            <p class="tagline">极致优雅的开源图床，集成流水线秒级响应</p>
+            <div class="cta-buttons">
+                <a href="https://github.com/Hana19951208/blog-images" class="btn btn-primary">
+                    GitHub 源码
+                </a>
+                <a href="https://github.com/Hana19951208/blog-images#quick-start" class="btn btn-secondary">
+                    快速启动指南
+                </a>
+            </div>
+        </header>
+
+        <section class="features">
+            <div class="feature-card">
+                <h3> paralelo 工作流</h3>
+                <p>CDN 预热与压缩同步任务智能解耦，并行执行提速 200%。</p>
+            </div>
+            <div class="feature-card">
+                <h3>微信素材同步</h3>
+                <p>中转方案完美解决 IP 白名单痛点，公众号配图从此自动化。</p>
+            </div>
+            <div class="feature-card">
+                <h3>Typora 全自动</h3>
+                <p>搭配 PicGo 插件，本地写作，粘贴即上传，处理即加速。</p>
+            </div>
+            <div class="feature-card">
+                <h3>智能压缩存档</h3>
+                <p>基于 jpegoptim 的增量压缩，在保证画质的同时节省 60% 流量。</p>
+            </div>
+        </section>
+
+        <footer>
+            <p>© 2026 Blog Images Box. Powered by GitHub Actions.</p>
+        </footer>
+    </div>
+</body>
+</html>
