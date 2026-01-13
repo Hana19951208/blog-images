@@ -1,8 +1,13 @@
 # 🖼️ Blog Images Box (V2.0)
 
-[![GitHub Stars](https://img.shields.io/github/stars/Hana19951208/blog-images?style=flat-square)](https://github.com/Hana19951208/blog-images/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/Hana19951208/blog-images?style=flat-square)](https://github.com/Hana19951208/blog-images/network/members)
-[![License](https://img.shields.io/github/license/Hana19951208/blog-images?style=flat-square)](https://github.com/Hana19951208/blog-images/blob/main/LICENSE)
+<p align="center">
+  <img src="https://img.shields.io/github/stars/Hana19951208/blog-images?style=for-the-badge&logo=github&color=5e5ce6" alt="Stars">
+  <img src="https://img.shields.io/github/forks/Hana19951208/blog-images?style=for-the-badge&logo=github&color=5e5ce6" alt="Forks">
+  <img src="https://img.shields.io/github/license/Hana19951208/blog-images?style=for-the-badge&logo=github&color=5e5ce6" alt="License">
+  <br>
+  <img src="https://img.shields.io/github/last-commit/Hana19951208/blog-images?style=flat-square" alt="Last Commit">
+  <img src="https://img.shields.io/github/v/tag/Hana19951208/blog-images?style=flat-square&label=release" alt="Release">
+</p>
 
 > **The ultimate elegant image hosting solution.** Integrated with Typora + PicGo + GitHub Actions + WeChat Official Account Sync.
 > Auto-compression, efficient preheating, and idempotent synchronization for seamless asset distribution.
@@ -11,7 +16,15 @@
 
 ---
 
+## 🌐 Documentation Hub
+This project and related tools are accessible via a unified domain:
+- **Image Hosting Box**: [docs.fangenwu.cn/BlogImagesBox](https://docs.fangenwu.cn/BlogImagesBox)
+- **Daily Wallpaper Hub**: [docs.fangenwu.cn/DailyWallpaperHub](https://docs.fangenwu.cn/DailyWallpaperHub)
+
+---
+
 ## 💡 Why this? (Solving the Pain Points)
+
 
 As a blogger or developer, are you tired of these hurdles?
 - ❌ **Oversized Images**: Manual compression is tedious; uncompressed assets bloat CDN costs.
@@ -156,15 +169,6 @@ export default {
 1. Select **GitHub** in PicGo settings.
 2. **Set Custom Domain**: Enter your Cloudflare Worker URL (e.g., `https://img.fangenwu.cn`).
 3. Now, when you paste images in Typora, PicGo will upload them to GitHub and return the Cloudflare-accelerated URL.
-
----
-
-## 📁 GitHub Pages Custom Domain
-
-To host your landing page on your own domain:
-1. Go to **Settings -> Pages** in your GitHub repo and find **Custom domain**.
-2. Enter your domain (e.g., `docs.fangenwu.cn`).
-3. In your DNS provider (Cloudflare), add a **CNAME** record pointing to `Hana19951208.github.io`.
 
 ---
 

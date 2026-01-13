@@ -16,7 +16,15 @@
 
 ---
 
+## 🌐 文档中心
+本项目文档及更多相关工具已整合至统一域名：
+- **图床管理文档**：[docs.fangenwu.cn/BlogImagesBox](https://docs.fangenwu.cn/BlogImagesBox)
+- **壁纸自动抓取**：[docs.fangenwu.cn/DailyWallpaperHub](https://docs.fangenwu.cn/DailyWallpaperHub)
+
+---
+
 ## 💡 核心流程图 (Workflow)
+
 
 ```mermaid
 graph LR
@@ -178,15 +186,6 @@ export default {
 1. 在 PicGo 中选择 **GitHub** 图床。
 2. **设定自定义域名**：填写您的 Cloudflare Worker 域名（例如 `https://img.fangenwu.cn`）。
 3. 这样您在 Typora 中粘贴图片时，PicGo 会将其上传到 GitHub，同时返回通过 Cloudflare 加速后的地址。
-
----
-
-## 📁 GitHub Pages 自定义域名设置
-
-如果您希望 `docs/` 下的首页也能通过您的域名访问：
-1. 在仓库 **Settings -> Pages** 下找到 **Custom domain**。
-2. 输入您的自定义域名（如 `docs.fangenwu.cn`）。
-3. 在您的 DNS 服务商（腾讯云/Cloudflare）处，为该域名添加一条 **CNAME** 记录，指向 `Hana19951208.github.io`。
 
 ---
 
